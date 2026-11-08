@@ -10,7 +10,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/** Task 12: holds the data typed into the "Deposit" or "Withdraw" form. */
 @Getter
 @Setter
 public class CashRequest {

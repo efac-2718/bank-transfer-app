@@ -27,16 +27,13 @@ public class BankTransaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Task 12: TRANSFER, DEPOSIT or WITHDRAWAL
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TransactionType type;
 
-    // Empty for a deposit (the money comes from outside the bank)
     @Column(length = 6)
     private String fromAccount;
 
-    // Empty for a withdrawal (the money leaves the bank)
     @Column(length = 6)
     private String toAccount;
 
@@ -46,7 +43,6 @@ public class BankTransaction {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal fee;
 
-    // Stored as the text SUCCESS / FAILED instead of 0 / 1
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TransactionStatus status;

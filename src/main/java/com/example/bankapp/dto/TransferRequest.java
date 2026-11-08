@@ -10,7 +10,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/** Holds the data typed into the "Transfer Money" form. */
 @Getter
 @Setter
 public class TransferRequest {
@@ -28,6 +27,5 @@ public class TransferRequest {
     @Digits(integer = 12, fraction = 2, message = "Use at most 12 digits and 2 decimal places")
     private BigDecimal amount;
 
-    // Experiment: throw an exception after the withdrawal to see the rollback
     private boolean simulateFailure;
 }
