@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|History - ${customer.accountNumber}|">Account History</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <a class="brand" th:href="@{/}">Bank Transfer System</a>
+            <nav>
+                <a th:href="@{/}">Dashboard</a>
+                <a th:href="@{/large-transfers(min=10000)}">Large transfers</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <p><a class="link" th:href="@{/}">&larr; Back to dashboard</a></p>
+
+        <!-- Account summary -->
+        <section class="card">
+            <h2 th:text="|${customer.fullName} (${customer.accountNumber})|">Kamal Silva (100001)</h2>
+            <p class="muted" th:text="${customer.email}">kamal@example.com</p>
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-label">Current balance (LKR)</span>
+                    <span class="stat-value" th:text="${#numbers.formatDecimal(customer.balance, 1, 'COMMA', 2, 'POINT')}">45,000.00</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Total sent in successful transfers (LKR)</span>
+                    <span class="stat-value" th:text="${#numbers.formatDecimal(totalSent, 1, 'COMMA', 2, 'POINT')}">5,000.00</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Transactions</span>
+                    <span class="stat-value" th:text="${#lists.size(transactions)}">2</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transactions where this account is the sender OR the receiver -->
+        <section class="card">
+            <h2>Transaction History</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Direction</th>
+                            <th>Other account</th>
+                            <th class="num">Amount (LKR)</th>
+                            <th class="num">Fee</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="t : ${transactions}"
+                            th:with="outgoing=${t.fromAccount == customer.accountNumber}">
+                            <td th:text="${t.id}">1</td>
+                            <td th:text="${#temporals.format(t.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-11-02 10:00:00</td>
+                            <td th:text="${t.type}">TRANSFER</td>
+                            <td><span class="badge" th:classappend="${outgoing} ? 'out' : 'in'"
+                                      th:text="${outgoing} ? 'OUT' : 'IN'">OUT</span></td>
+                            <td th:text="${outgoing ? (t.toAccount ?: 'Cash') : (t.fromAccount ?: 'Cash')}">100002</td>
+                            <td class="num" th:text="${#numbers.formatDecimal(t.amount, 1, 'COMMA', 2, 'POINT')}">5,000.00</td>
+                            <td class="num" th:text="${#numbers.formatDecimal(t.fee, 1, 'COMMA', 2, 'POINT')}">50.00</td>
+                            <td><span class="badge" th:classappend="${t.status.name() == 'SUCCESS'} ? 'ok' : 'bad'"
+                                      th:text="${t.status}">SUCCESS</span></td>
+                            <td th:text="${t.description}">Transfer completed</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(transactions)}">
+                            <td colspan="9" class="empty">No transactions for this account yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+
+</html>

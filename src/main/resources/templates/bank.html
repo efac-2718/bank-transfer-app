@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bank Transfer System</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <a class="brand" th:href="@{/}">Bank Transfer System</a>
+            <nav>
+                <a class="active" th:href="@{/}">Dashboard</a>
+                <a th:href="@{/large-transfers(min=10000)}">Large transfers</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <div class="alert success" th:if="${message}" th:text="${message}">Transfer completed</div>
+        <div class="alert error" th:if="${error}" th:text="${error}">Transfer failed</div>
+
+        <!-- Statistics -->
+        <section class="stats">
+            <div class="stat">
+                <span class="stat-label">Customers</span>
+                <span class="stat-value" th:text="${customerCount}">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total balance (LKR)</span>
+                <span class="stat-value" th:text="${#numbers.formatDecimal(totalBalance, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Successful transactions</span>
+                <span class="stat-value ok" th:text="${successCount}">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Failed transactions</span>
+                <span class="stat-value bad" th:text="${failedCount}">0</span>
+            </div>
+        </section>
+
+        <section class="grid">
+
+            <!-- Transfer money -->
+            <div class="card">
+                <h2>Transfer Money</h2>
+                <form th:action="@{/transfer}" th:object="${transferRequest}" method="post" novalidate>
+                    <label for="fromAccount">From account</label>
+                    <select th:field="*{fromAccount}">
+                        <option value="">-- choose sender --</option>
+                        <option th:each="c : ${allCustomers}" th:value="${c.accountNumber}"
+                                th:text="|${c.accountNumber} - ${c.fullName}|">100001 - Kamal Silva</option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('fromAccount')}" th:errors="*{fromAccount}"></p>
+
+                    <label for="toAccount">To account</label>
+                    <select th:field="*{toAccount}">
+                        <option value="">-- choose receiver --</option>
+                        <option th:each="c : ${allCustomers}" th:value="${c.accountNumber}"
+                                th:text="|${c.accountNumber} - ${c.fullName}|">100002 - Nimali Perera</option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('toAccount')}" th:errors="*{toAccount}"></p>
+
+                    <label for="amount">Amount (LKR)</label>
+                    <input type="number" step="0.01" min="0" th:field="*{amount}" placeholder="5000.00">
+                    <p class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></p>
+
+                    <label class="check">
+                        <input type="checkbox" th:field="*{simulateFailure}">
+                        Simulate a system failure (after the withdrawal)
+                    </label>
+
+                    <p class="hint" th:if="${feePercent.signum() > 0}">
+                        A fee of <strong th:text="|${feePercent}%|">1%</strong> is withdrawn from the sender
+                        and paid into account <span th:text="${feeAccount}">999999</span>.
+                    </p>
+
+                    <button type="submit">Transfer</button>
+                </form>
+            </div>
+
+            <!-- Add customer -->
+            <div class="card">
+                <h2>Add Customer</h2>
+                <form th:action="@{/customers}" th:object="${customer}" method="post" novalidate>
+                    <label for="accountNumber">Account number</label>
+                    <input type="text" th:field="*{accountNumber}" placeholder="100004" maxlength="6">
+                    <p class="field-error" th:if="${#fields.hasErrors('accountNumber')}" th:errors="*{accountNumber}"></p>
+
+                    <label for="fullName">Full name</label>
+                    <input type="text" th:field="*{fullName}" placeholder="Nuwan Jayasinghe">
+                    <p class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></p>
+
+                    <label for="email">Email</label>
+                    <input type="email" th:field="*{email}" placeholder="nuwan@example.com">
+                    <p class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+
+                    <label for="balance">Opening balance (LKR)</label>
+                    <input type="number" step="0.01" min="0" th:field="*{balance}" placeholder="15000.00">
+                    <p class="field-error" th:if="${#fields.hasErrors('balance')}" th:errors="*{balance}"></p>
+
+                    <button type="submit">Add customer</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Deposit</h2>
+                <form th:action="@{/deposit}" th:object="${depositRequest}" method="post" novalidate>
+                    <label for="depositAccount">Account</label>
+                    <select id="depositAccount" th:field="*{accountNumber}">
+                        <option value="">-- choose account --</option>
+                        <option th:each="c : ${allCustomers}" th:value="${c.accountNumber}"
+                                th:text="|${c.accountNumber} - ${c.fullName}|">100001 - Kamal Silva</option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('accountNumber')}" th:errors="*{accountNumber}"></p>
+
+                    <label for="depositAmount">Amount (LKR)</label>
+                    <input id="depositAmount" type="number" step="0.01" min="0" th:field="*{amount}" placeholder="1000.00">
+                    <p class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></p>
+
+                    <button type="submit">Deposit</button>
+                </form>
+            </div>
+
+            <!-- Task 12: withdraw -->
+            <div class="card">
+                <h2>Withdraw</h2>
+                <form th:action="@{/withdraw}" th:object="${withdrawRequest}" method="post" novalidate>
+                    <label for="withdrawAccount">Account</label>
+                    <select id="withdrawAccount" th:field="*{accountNumber}">
+                        <option value="">-- choose account --</option>
+                        <option th:each="c : ${allCustomers}" th:value="${c.accountNumber}"
+                                th:text="|${c.accountNumber} - ${c.fullName}|">100001 - Kamal Silva</option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('accountNumber')}" th:errors="*{accountNumber}"></p>
+
+                    <label for="withdrawAmount">Amount (LKR)</label>
+                    <input id="withdrawAmount" type="number" step="0.01" min="0" th:field="*{amount}" placeholder="1000.00">
+                    <p class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></p>
+
+                    <button type="submit">Withdraw</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Customers -->
+        <section class="card">
+            <div class="card-head">
+                <h2>Customers</h2>
+                <form class="inline" th:action="@{/}" method="get">
+                    <input type="text" name="keyword" th:value="${keyword}" placeholder="Search by name">
+                    <button type="submit">Search</button>
+                    <a class="link" th:if="${!#strings.isEmpty(keyword)}" th:href="@{/}">Clear</a>
+                </form>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Account</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th class="num">Balance (LKR)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${customers}">
+                            <td th:text="${c.accountNumber}">100001</td>
+                            <td th:text="${c.fullName}">Kamal Silva</td>
+                            <td th:text="${c.email}">kamal@example.com</td>
+                            <td class="num" th:text="${#numbers.formatDecimal(c.balance, 1, 'COMMA', 2, 'POINT')}">50,000.00</td>
+                            <td><a th:href="@{/accounts/{acc}/history(acc=${c.accountNumber})}">View history</a></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(customers)}">
+                            <td colspan="5" class="empty">No customers found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Latest transactions -->
+        <section class="card">
+            <div class="card-head">
+                <h2>Latest Transactions</h2>
+                <form class="inline" th:action="@{/}" method="get">
+                    <input type="hidden" name="keyword" th:value="${keyword}">
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"
+                                th:selected="${s == status}">SUCCESS</option>
+                    </select>
+                    <button type="submit">Filter</button>
+                </form>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th class="num">Amount (LKR)</th>
+                            <th class="num">Fee</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="t : ${transactions}">
+                            <td th:text="${t.id}">1</td>
+                            <td th:text="${#temporals.format(t.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-11-02 10:00:00</td>
+                            <td th:text="${t.type}">TRANSFER</td>
+                            <td th:text="${t.fromAccount ?: '-'}">100001</td>
+                            <td th:text="${t.toAccount ?: '-'}">100002</td>
+                            <td class="num" th:text="${#numbers.formatDecimal(t.amount, 1, 'COMMA', 2, 'POINT')}">5,000.00</td>
+                            <td class="num" th:text="${#numbers.formatDecimal(t.fee, 1, 'COMMA', 2, 'POINT')}">50.00</td>
+                            <td><span class="badge" th:classappend="${t.status.name() == 'SUCCESS'} ? 'ok' : 'bad'"
+                                      th:text="${t.status}">SUCCESS</span></td>
+                            <td th:text="${t.description}">Transfer completed</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(transactions)}">
+                            <td colspan="9" class="empty">No transactions yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+
+</html>
