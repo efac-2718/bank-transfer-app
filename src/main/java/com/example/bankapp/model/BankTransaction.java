@@ -43,7 +43,6 @@ public class BankTransaction {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
 
-    // Task 12: transfer fee paid by the sender into account 999999 (0.00 for everything else)
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal fee;
 

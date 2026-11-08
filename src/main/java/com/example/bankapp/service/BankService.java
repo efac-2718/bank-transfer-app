@@ -21,10 +21,9 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)          // default for every method: read-only transaction
+@Transactional(readOnly = true)  
 public class BankService {
 
-    /** Task 12: the bank's own account that receives the transfer fees. */
     public static final String FEE_ACCOUNT = "999999";
 
     private static final BigDecimal HUNDRED = new BigDecimal("100");
@@ -32,11 +31,9 @@ public class BankService {
     private final CustomerRepository customerRepository;
     private final BankTransactionRepository transactionRepository;
 
-    // Not final, so Lombok leaves it out of the constructor and Spring sets it from application.properties
     @Value("${bank.transfer-fee-percent:1}")
     private BigDecimal feePercent;
 
-    // ---------------- Reads (class default: readOnly = true) ----------------
 
     public List<Customer> getCustomers(String keyword) {
         if (keyword == null || keyword.isBlank()) {

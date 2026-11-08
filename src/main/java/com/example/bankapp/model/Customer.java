@@ -47,7 +47,6 @@ public class Customer {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    // BigDecimal, never double: money must be exact. DECIMAL(14,2) in MySQL.
     @NotNull(message = "Opening balance is required")
     @DecimalMin(value = "0.00", message = "Balance cannot be negative")
     @Digits(integer = 12, fraction = 2, message = "Use at most 12 digits and 2 decimal places")
