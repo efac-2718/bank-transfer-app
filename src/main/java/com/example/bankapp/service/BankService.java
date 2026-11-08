@@ -12,6 +12,7 @@ import com.example.bankapp.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -82,12 +83,10 @@ public class BankService {
         return feePercent;
     }
 
-    /** Task 12: e.g. 1% of 5,000.00 = 50.00, rounded to cents. */
     public BigDecimal calculateFee(BigDecimal amount) {
         return amount.multiply(feePercent).divide(HUNDRED, 2, RoundingMode.HALF_UP);
     }
 
-    // ---------------- Writes (read-write transactions) ----------------
 
     @Transactional
     public Customer createCustomer(Customer customer) {
@@ -100,18 +99,6 @@ public class BankService {
         return customerRepository.save(customer);
     }
 
-    /**
-     * Moves money from one account to another as ONE transaction.
-     * rollbackFor = Exception.class overrides the class default (read-only) with a read-write transaction
-     * that rolls back for every exception, checked ones too. If any step below throws, Spring undoes
-     * the debit, the credits and the INSERT: the database is back where it was before the transfer.
-     *
-     * Do NOT catch the exceptions in here: Spring must see them to roll back.
-     *
-     * Task 10 experiment: replace the annotation with
-     *     @Transactional(propagation = Propagation.SUPPORTS)
-     * and the withdrawal stays committed when the simulated failure happens.
-     */
     @Transactional(rollbackFor = Exception.class)
     public BankTransaction transfer(String fromAccount, String toAccount, BigDecimal amount, boolean simulateFailure) {
         // 1. Validate: accounts different and both exist
@@ -121,31 +108,25 @@ public class BankService {
         requireAccount(fromAccount);
         requireAccount(toAccount);
 
-        // Task 12: the sender also pays the fee, so the three updates below are all in this one transaction
         BigDecimal fee = calculateFee(amount);
 
-        // 2. Withdraw from the sender: 0 rows updated = balance too low
         if (customerRepository.debit(fromAccount, amount.add(fee)) == 0) {
             throw new InsufficientBalanceException(fromAccount);
         }
 
-        // 3. Experiment: crash after the money has already left the sender
         if (simulateFailure) {
             throw new BankException("Simulated system failure after the withdrawal");
         }
 
-        // 4. Deposit to the receiver, and the fee to the bank's account
         customerRepository.credit(toAccount, amount);
         if (fee.signum() > 0 && customerRepository.credit(FEE_ACCOUNT, fee) == 0) {
             throw new AccountNotFoundException(FEE_ACCOUNT);
         }
 
-        // 5. Save a SUCCESS record
         return transactionRepository.save(new BankTransaction(TransactionType.TRANSFER, fromAccount, toAccount,
                 amount, fee, TransactionStatus.SUCCESS, "Transfer completed"));
     }
 
-    /** Task 12: cash paid into an account. credit() and the record are one transaction. */
     @Transactional(rollbackFor = Exception.class)
     public BankTransaction deposit(String accountNumber, BigDecimal amount) {
         if (customerRepository.credit(accountNumber, amount) == 0) {
@@ -155,7 +136,6 @@ public class BankService {
                 amount, BigDecimal.ZERO, TransactionStatus.SUCCESS, "Deposit completed"));
     }
 
-    /** Task 12: cash taken out of an account. debit() and the record are one transaction. */
     @Transactional(rollbackFor = Exception.class)
     public BankTransaction withdraw(String accountNumber, BigDecimal amount) {
         requireAccount(accountNumber);

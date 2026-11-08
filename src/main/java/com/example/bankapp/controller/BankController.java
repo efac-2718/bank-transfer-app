@@ -34,14 +34,11 @@ public class BankController {
     private final BankService bankService;
     private final TransactionAuditService auditService;
 
-    // Only these fields can be bound from the "Add customer" form, so a request can never send an id
-    // and overwrite an existing customer
     @InitBinder("customer")
     public void allowCustomerFields(WebDataBinder binder) {
         binder.setAllowedFields("accountNumber", "fullName", "email", "balance");
     }
 
-    // Dashboard: statistics, forms, customers table, latest transactions
     @GetMapping("/")
     public String dashboard(@RequestParam(required = false) String keyword,
                             @RequestParam(required = false) TransactionStatus status,
@@ -84,8 +81,6 @@ public class BankController {
             }
             redirect.addFlashAttribute("message", message);
         } catch (RuntimeException e) {
-            // When we get here Spring has ALREADY rolled back transfer().
-            // The FAILED record is saved in its own new transaction (REQUIRES_NEW), so it is not lost.
             auditService.recordFailure(TransactionType.TRANSFER, request.getFromAccount(), request.getToAccount(),
                     request.getAmount(), e.getMessage());
             redirect.addFlashAttribute("error",
@@ -94,7 +89,6 @@ public class BankController {
         return "redirect:/";
     }
 
-    // Task 12: deposit cash into an account
     @PostMapping("/deposit")
     public String deposit(@Valid @ModelAttribute("depositRequest") CashRequest request, BindingResult result,
                           Model model, RedirectAttributes redirect) {
@@ -114,7 +108,6 @@ public class BankController {
         return "redirect:/";
     }
 
-    // Task 12: withdraw cash from an account
     @PostMapping("/withdraw")
     public String withdraw(@Valid @ModelAttribute("withdrawRequest") CashRequest request, BindingResult result,
                            Model model, RedirectAttributes redirect) {
@@ -134,7 +127,6 @@ public class BankController {
         return "redirect:/";
     }
 
-    // Transactions of one account (sent and received)
     @GetMapping("/accounts/{accountNumber}/history")
     public String history(@PathVariable String accountNumber, Model model, RedirectAttributes redirect) {
         Optional<Customer> customer = bankService.findCustomer(accountNumber);
@@ -148,7 +140,6 @@ public class BankController {
         return "history";
     }
 
-    // Task 12: transfers of at least ?min= (default 10,000.00)
     @GetMapping("/large-transfers")
     public String largeTransfers(@RequestParam(defaultValue = "10000") BigDecimal min, Model model) {
         model.addAttribute("min", min);
@@ -156,7 +147,6 @@ public class BankController {
         return "large-transfers";
     }
 
-    // Shows the dashboard again (instead of redirecting) so the forms keep their values and error messages
     private String showDashboard(Model model) {
         loadDashboard(model, null, null);
         return "bank";
@@ -176,7 +166,6 @@ public class BankController {
         model.addAttribute("feePercent", bankService.getFeePercent());
         model.addAttribute("feeAccount", BankService.FEE_ACCOUNT);
 
-        // Empty form objects, unless a submitted one (with its errors) is already in the model
         if (!model.containsAttribute("transferRequest")) {
             model.addAttribute("transferRequest", new TransferRequest());
         }
